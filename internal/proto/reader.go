@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"strconv"
 
 	"github.com/go-redis/redis/v8/internal/util"
 )
@@ -105,7 +106,11 @@ func (r *Reader) ReadReply(m MultiBulkParse) (interface{}, error) {
 	case StatusReply:
 		return string(line[1:]), nil
 	case IntReply:
-		return util.ParseInt(line[1:], 10, 64)
+		n, err := util.ParseInt(line[1:], 10, 64)
+		if err != nil && err.(*strconv.NumError).Err == strconv.ErrRange {
+			return util.ParseUint(line[1:], 10, 64)
+		}
+		return n, err
 	case StringReply:
 		return r.readStringReply(line)
 	case ArrayReply:
